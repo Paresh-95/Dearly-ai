@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from app.core.errors import NotFound, Unauthenticated
 from app.core.security import decode_token
 from app.db.session import get_db
-from app.models import PersonProfile, User
+from app.models import Memory, PersonProfile, User
+from app.repositories import memories as memory_repo
 from app.repositories import profiles as profile_repo
 from app.repositories import users as user_repo
 
@@ -56,3 +57,13 @@ def get_owned_profile(profile_id: UUID, db: DbSession, auth: Auth) -> PersonProf
 
 
 OwnedProfile = Annotated[PersonProfile, Depends(get_owned_profile)]
+
+
+def get_owned_memory(memory_id: UUID, db: DbSession, auth: Auth) -> Memory:
+    memory = memory_repo.get_owned(db, auth.user_id, memory_id)
+    if memory is None:
+        raise NotFound("Memory not found")
+    return memory
+
+
+OwnedMemory = Annotated[Memory, Depends(get_owned_memory)]

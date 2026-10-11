@@ -3,8 +3,11 @@
 A private platform for preserving a loved one's memories and asking questions answered only from
 those memories. See `docs/architecture/blueprint.md` for the full architecture and roadmap.
 
-**Status:** Milestone 1 (foundation) — auth, profiles API, full database schema, frontend shell.
-Ingestion, indexing, retrieval and chat are not implemented yet.
+**Status:** Milestone 2 — auth, profiles, consent records, manual memory CRUD with a review
+(draft → awaiting review → approved/rejected) workflow, and the frontend onboarding/write/
+review/library flow. Ingestion, chunking/embeddings, retrieval and chat are not implemented
+yet. See `docs/decisions/0002-rls-deferred.md` for a known isolation gap (no Postgres RLS
+yet; enforcement today is at the repository/query layer plus DB-level composite FKs).
 
 ## Run locally
 

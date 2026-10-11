@@ -65,5 +65,20 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
-export const post = <T>(path: string, body?: unknown) =>
-  api<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
+function withBody(method: string, body?: unknown): RequestInit {
+  return { method, body: body === undefined ? undefined : JSON.stringify(body) };
+}
+
+export const get = <T>(path: string, params?: Record<string, string | number | undefined>) =>
+  api<T>(`${path}${toQueryString(params)}`);
+export const post = <T>(path: string, body?: unknown) => api<T>(path, withBody("POST", body));
+export const patch = <T>(path: string, body?: unknown) => api<T>(path, withBody("PATCH", body));
+export const del = (path: string) => api<void>(path, { method: "DELETE" });
+
+export function toQueryString(params?: Record<string, string | number | undefined>): string {
+  if (!params) return "";
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "");
+  if (entries.length === 0) return "";
+  const search = new URLSearchParams(entries.map(([k, v]) => [k, String(v)]));
+  return `?${search.toString()}`;
+}

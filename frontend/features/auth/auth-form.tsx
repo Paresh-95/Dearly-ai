@@ -104,7 +104,7 @@ export function RegisterForm() {
             setFormError(null);
             try {
               await signUp(v.email, v.password, v.displayName);
-              router.push("/dashboard");
+              router.push("/onboarding/consent");
             } catch (e) {
               setFormError(message(e));
             }
