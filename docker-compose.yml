@@ -1,0 +1,61 @@
+# Host ports are deliberately offset (5433/8100/3100/9100) to avoid clashing with other
+# local stacks. Override via .env if needed.
+name: memory-companion
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: memory
+      POSTGRES_PASSWORD: ${MC_DB_PASSWORD:-memory}
+      POSTGRES_DB: memory_companion
+    ports:
+      - "${MC_DB_PORT:-5433}:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memory -d memory_companion"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MC_S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MC_S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "${MC_S3_PORT:-9100}:9000"
+      - "${MC_S3_CONSOLE_PORT:-9101}:9001"
+    volumes:
+      - miniodata:/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+    environment:
+      MC_DATABASE_URL: postgresql+psycopg://memory:${MC_DB_PASSWORD:-memory}@db:5432/memory_companion
+      MC_JWT_SECRET: ${MC_JWT_SECRET:-dev-only-insecure-secret-change-me-0123456789}
+      MC_CORS_ORIGINS: '["http://localhost:3100"]'
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${MC_BACKEND_PORT:-8100}:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infra/docker/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8100
+    depends_on:
+      - backend
+    ports:
+      - "${MC_FRONTEND_PORT:-3100}:3000"
+
+volumes:
+  dbdata:
+  miniodata:
