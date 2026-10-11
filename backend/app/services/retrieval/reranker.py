@@ -3,16 +3,14 @@
 on real data before anything fancier is adopted (see evals/). `LexicalOverlapReranker` is
 that transparent default — plain token overlap between the query and each candidate."""
 
-import re
 from abc import ABC, abstractmethod
 
 from app.services.retrieval.base import RetrievedChunk
-
-_TOKEN_RE = re.compile(r"[a-z0-9]+")
+from app.services.retrieval.tokenize import tokenize_words
 
 
 def _tokenize(text: str) -> set[str]:
-    return set(_TOKEN_RE.findall(text.lower()))
+    return set(tokenize_words(text.lower()))
 
 
 class Reranker(ABC):

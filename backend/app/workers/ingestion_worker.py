@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db.session import get_sessionmaker
 from app.domain.enums import SourceKind
+from app.domain.profile_context import describe_profile
 from app.models import PersonProfile
 from app.repositories import ingestion_jobs as jobs_repo
 from app.repositories import memories as memories_repo
@@ -50,7 +51,7 @@ def _materialize_if_needed(kind: SourceKind, data: bytes) -> Iterator[Path | Non
 
 def _profile_context(db: Session, person_profile_id) -> str:  # noqa: ANN001
     profile = db.get(PersonProfile, person_profile_id)
-    return f"{profile.name} ({profile.relationship})" if profile else ""
+    return describe_profile(profile) if profile else ""
 
 
 def process_one(

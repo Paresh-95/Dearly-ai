@@ -12,6 +12,7 @@ import logging
 from PIL import Image, UnidentifiedImageError
 from PIL.ExifTags import TAGS
 
+from app.core.config import get_settings
 from app.services.extraction.base import ExtractionError, Segment
 
 log = logging.getLogger("app.extraction.image")
@@ -46,7 +47,7 @@ def extract_image(data: bytes) -> tuple[list[Segment], dict[str, str | int]]:
     try:
         import pytesseract
 
-        text = pytesseract.image_to_string(image).strip()
+        text = pytesseract.image_to_string(image, lang=get_settings().ocr_languages).strip()
     except Exception as exc:  # pytesseract missing, tesseract binary missing, or a decode error
         log.info("OCR unavailable or failed, continuing without it: %s", exc)
         metadata["ocr_attempted"] = True

@@ -5,13 +5,21 @@ never split across a chunk boundary — and attached to the chunk they end up in
 
 Deliberately a plain regex sentence splitter, not an NLP library: good enough for the chunk
 sizes involved here, and Milestone 5's evaluation framework is where chunk-size/strategy
-choices should actually be tuned against real retrieval metrics, not guessed at here."""
+choices should actually be tuned against real retrieval metrics, not guessed at here.
+
+The terminator class includes the Devanagari danda (।) and double danda (॥) — Hindi and
+Marathi's own sentence-ending punctuation, not just the Latin "."/"!"/"?" — and the
+lookahead accepts a following Devanagari letter the same way it accepts a Latin capital:
+Devanagari has no case distinction, so "any letter follows" is the equivalent signal to
+"any capital letter follows" for Latin script. Without this, a memory written in Hindi or
+Marathi was never split into sentences at all (it has no "." followed by a capital), always
+becoming one oversized chunk instead of several well-sized ones."""
 
 import re
 from dataclasses import dataclass, field
 from typing import Any
 
-_SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'])")
+_SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?।॥])\s+(?=[A-Z0-9\"'ऀ-ॿ])")
 
 
 @dataclass

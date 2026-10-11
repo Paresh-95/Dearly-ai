@@ -30,14 +30,25 @@ nothing at all. The script detects this (`diagnostics.dense_error` on the respon
 prints a loud warning instead of letting the numbers pass as real. Keyword-only numbers are
 real and meaningful either way, since Postgres full-text search needs no external provider.
 
-**Dataset size.** Twelve query cases is enough to catch an obviously broken pipeline and to
+**Dataset size.** Fourteen query cases is enough to catch an obviously broken pipeline and to
 illustrate the known cases (direct keyword match, multi-memory, paraphrase, category filter,
-no-answer, a prompt-injection-shaped query) — it is not enough to call any percentage here a
-real accuracy figure for the product. Treat this as the harness proving it works and as a
-regression check, not as a benchmark result to quote.
+no-answer, a prompt-injection-shaped query, Hindi/Marathi) — it is not enough to call any
+percentage here a real accuracy figure for the product. Treat this as the harness proving it
+works and as a regression check, not as a benchmark result to quote.
+
+**Multi-language.** Two cases (`marathi_direct_overlap`, `hindi_direct_overlap`) are plain
+Devanagari questions against Devanagari memories, added after finding and fixing a real bug
+this way: the keyword word-extractor only matched `[a-zA-Z0-9]`, so a pure-Hindi or
+pure-Marathi query matched nothing at all, unconditionally (see
+`docs/decisions/0008-multilingual-tokenization.md`). After the fix, both correctly retrieve
+their target memory — recall@5 on this fixture set went from 0.750 to 0.792 once they were
+added and passing. The same caveat about dense/hybrid applies equally here: without a real
+embedding provider configured, only the keyword-search result for these two is a real
+measurement.
 
 **Known gaps**, left for a follow-up rather than filled with low-confidence content now:
-- No non-English query cases yet, despite the product supporting multiple languages.
+- Only two non-English cases, both Devanagari and both a direct keyword match — no
+  paraphrase-style or multi-memory Hindi/Marathi case yet, and no other language family.
 - The reranker is the deliberately simple lexical-overlap default (see
   `app/services/retrieval/reranker.py`); this harness is exactly what would be used to decide
   whether a real reranking model is worth adding.

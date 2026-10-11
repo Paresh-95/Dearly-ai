@@ -34,6 +34,9 @@ phrasing), set done to true, leave question empty, and write a short, warm thank
 closing_message. Also set done to true, with a warm closing_message, once the conversation \
 has covered good ground (roughly 8-12 exchanges) — do not drag it out.
 6. Keep questions short, warm, and conversational — never clinical.
+7. Ask in whatever language the person has been answering in (for example Hindi, Marathi, \
+or English, or a natural mix) — match their language rather than defaulting to English. If \
+nothing has been said yet, English is a reasonable default for the opening follow-up.
 """
 
 

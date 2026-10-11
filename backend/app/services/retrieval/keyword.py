@@ -1,4 +1,3 @@
-import re
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -6,8 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models import MemoryChunk
 from app.services.retrieval.base import RetrievedChunk
-
-_WORD_RE = re.compile(r"[a-zA-Z0-9]+")
+from app.services.retrieval.tokenize import tokenize_words
 
 
 def _or_query(query: str) -> str | None:
@@ -18,7 +16,7 @@ def _or_query(query: str) -> str | None:
     this ORs the extracted words instead -- `ts_rank` still rewards a chunk that matches
     more of them over one that matches only one. Returns None for a query with no words at
     all (e.g. pure punctuation)."""
-    words = _WORD_RE.findall(query.lower())
+    words = tokenize_words(query.lower())
     return " | ".join(words) if words else None
 
 

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -91,3 +92,43 @@ class TestImageExtractor:
     def test_rejects_a_non_image(self):
         with pytest.raises(ExtractionError):
             extract_image(b"not actually an image")
+
+
+@pytest.mark.skipif(
+    os.environ.get("MC_RUN_OCR_TESTS") != "1",
+    reason="needs tesseract-ocr-hin/-mar installed locally; set MC_RUN_OCR_TESTS=1 "
+    "(they're always present in the backend/worker Docker image)",
+)
+class TestDevanagariOcr:
+    """Regression test for MC_OCR_LANGUAGES: pytesseract defaults to English-only OCR, so a
+    Hindi/Marathi photo (e.g. of a handwritten note) silently produced no text at all until
+    this was wired through. Skipped on the host (no tesseract installed); verified for
+    real by hand against the built Docker image, which does have tesseract-ocr-hin/-mar
+    installed (see infra/docker/backend.Dockerfile)."""
+
+    def test_recognises_devanagari_text_in_an_image(self, tmp_path):
+        import glob
+
+        from PIL import Image, ImageDraw, ImageFont
+
+        font_path = next(
+            (
+                p
+                for p in glob.glob("/usr/share/fonts/**/*.ttf", recursive=True)
+                if "devanagari" in p.lower() or "noto" in p.lower()
+            ),
+            None,
+        )
+        if font_path is None:
+            pytest.skip("no Devanagari-capable font found on this system")
+
+        img = Image.new("RGB", (600, 100), "white")
+        ImageDraw.Draw(img).text(
+            (10, 20), "नमस्ते पोहा", fill="black", font=ImageFont.truetype(font_path, 40)
+        )
+        path = tmp_path / "devanagari.png"
+        img.save(path)
+
+        segments, metadata = extract_image(path.read_bytes())
+        assert metadata["ocr_available"] is True
+        assert segments and "पोहा" in segments[0].text

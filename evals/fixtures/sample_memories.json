@@ -3,7 +3,8 @@
   "profile": {
     "name": "Asha Patil",
     "relationship": "mother",
-    "preferred_name": "Aai"
+    "preferred_name": "Aai",
+    "languages": ["Marathi", "Hindi", "English"]
   },
   "memories": [
     {
@@ -113,6 +114,24 @@
       "date_text": null,
       "location": null,
       "people": [{"name": "Raj", "relationship": "son"}]
+    },
+    {
+      "key": "marathi_lullaby",
+      "title": "अंगाई गीत",
+      "description": "आई रोज रात्री झोपण्यापूर्वी एक जुने अंगाई गीत म्हणत असे. ते गाणे ऐकल्याशिवाय आम्हाला झोप येत नसे.",
+      "category": "daily_life",
+      "date_text": null,
+      "location": null,
+      "people": []
+    },
+    {
+      "key": "hindi_blessing",
+      "title": "आशीर्वाद",
+      "description": "जब भी हम घर से बाहर जाते, वह हमेशा सिर पर हाथ रखकर आशीर्वाद देती थी और कहती थी कि खुश रहो।",
+      "category": "communication_style",
+      "date_text": null,
+      "location": null,
+      "people": []
     }
   ]
 }

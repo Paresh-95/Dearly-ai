@@ -38,6 +38,11 @@ GENERATOR_UNAVAILABLE_ANSWER = (
 
 def _persona_guidance(profile: PersonProfile) -> str:
     parts = []
+    if profile.languages:
+        # So the model recognises Hindi/Marathi/etc. memories and quotations as expected
+        # content, not something to silently translate (see the system prompt's explicit
+        # language-preservation rule).
+        parts.append(f"She spoke {', '.join(profile.languages)}.")
     if profile.personality:
         parts.append(profile.personality[:600])
     if profile.biography:

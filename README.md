@@ -3,6 +3,13 @@
 A private platform for preserving a loved one's memories and asking questions answered only from
 those memories. See `docs/architecture/blueprint.md` for the full architecture and roadmap.
 
+**Multi-language note:** retrieval, chunking, OCR and every LLM prompt have been checked
+against Hindi/Marathi (Devanagari script) specifically, not just assumed to work — this
+found and fixed real bugs (zero keyword-search results for a pure-Devanagari query; chunking
+never splitting Hindi/Marathi text into sentences; OCR defaulting to English-only). See
+`docs/decisions/0008-multilingual-tokenization.md`. The frontend's own UI text (buttons,
+labels) is still English-only — that's a separate, larger localization effort, not done here.
+
 **Status:** Milestone 7 — the above, plus the AI Memory Interviewer: `/interview` asks one
 gentle, open-ended question at a time (never leading, never presupposing a detail that
 hasn't been said), follows up naturally using conversation context, and on request turns

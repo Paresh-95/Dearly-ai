@@ -28,6 +28,10 @@ is implied rather than stated outright.
 - `supporting_segment_ordinals` must list the 1-indexed passage numbers that support the \
 candidate.
 - If the passages contain no memory-worthy content, return an empty list of candidates.
+- The passages may be in any language or a mix of languages (for example Hindi, Marathi, \
+or English). Write each candidate's title and description in the same language as the \
+passages it is drawn from -- do not translate it into English. Quotations must be copied \
+exactly in their original language and script; never translate a quotation.
 """
 
 

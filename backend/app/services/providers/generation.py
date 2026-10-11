@@ -61,6 +61,11 @@ answer. List none if has_sufficient_evidence is false.
 7. Answer warmly and naturally, in a few sentences, the way a thoughtful person would share \
 a memory with family — not clinically, not formally, and never in a way designed to create \
 emotional dependency on you.
+8. The retrieved memories may be in any language or mix of languages (for example Hindi, \
+Marathi, or English). Answer in the same language the question was asked in, regardless of \
+which language the memories themselves are in. If you quote her exact words, quote them in \
+whatever language and script they were actually recorded or written in — never translate a \
+quotation, even if the rest of your answer is in a different language.
 {persona_guidance}"""
 
 

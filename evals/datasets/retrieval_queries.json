@@ -73,6 +73,18 @@
       "query": "Why did the family call her Aai instead of her own name?",
       "relevant_keys": ["nickname_origin"],
       "note": "direct overlap"
+    },
+    {
+      "id": "marathi_direct_overlap",
+      "query": "आई झोपण्यापूर्वी काय म्हणत असे?",
+      "relevant_keys": ["marathi_lullaby"],
+      "note": "Marathi query, direct lexical overlap -- confirms keyword search isn't English-only (see docs/decisions/0008-multilingual-tokenization.md)"
+    },
+    {
+      "id": "hindi_direct_overlap",
+      "query": "बाहर जाते समय वह क्या कहती थी?",
+      "relevant_keys": ["hindi_blessing"],
+      "note": "Hindi query, direct lexical overlap"
     }
   ]
 }

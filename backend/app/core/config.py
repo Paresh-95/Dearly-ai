@@ -55,6 +55,13 @@ class Settings(BaseSettings):
     # one is split on sentence boundaries so no chunk exceeds this many characters. ---
     chunk_max_chars: int = 1200
 
+    # tesseract language codes to attempt, '+'-joined. The backend/worker image installs
+    # tesseract-ocr-hin and tesseract-ocr-mar alongside the English pack (see
+    # infra/docker/backend.Dockerfile); a language not actually installed just makes OCR
+    # fail for that image, which app/services/extraction/image.py already treats as a
+    # normal "no OCR available" outcome, never a failed ingestion job.
+    ocr_languages: str = "eng+hin+mar"
+
     def validate_for_environment(self) -> None:
         if self.environment != "development" and self.jwt_secret.startswith("dev-only"):
             raise RuntimeError("MC_JWT_SECRET must be set outside development")

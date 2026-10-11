@@ -81,6 +81,24 @@ class TestPipelineIntegration:
         assert body["diagnostics"]["keyword_count"] >= 1
         assert body["diagnostics"]["took_ms"] >= 0
 
+    def test_keyword_search_finds_a_marathi_memory_by_a_marathi_query(self, client, alice):
+        """Regression test: the word-extractor used to build the OR-tsquery only matched
+        [a-zA-Z0-9], so it matched nothing at all in Devanagari text -- a Hindi/Marathi
+        query returned zero results unconditionally, regardless of what was approved."""
+        pid = profile_id(client, alice)
+        self._approved_memory(
+            client, alice, pid, title="आईच्या आठवणी",
+            description="आई नेहमी रविवारी पोहे बनवत असे. ती सकाळी आठ वाजता सर्वांना उठवत असे.",
+        )
+
+        r = client.post(
+            "/api/v1/retrieval/search",
+            json={"person_profile_id": pid, "query": "रविवारी पोहे कोण बनवत असे?", "mode": "keyword"},
+            headers=alice,
+        )
+        assert r.status_code == 200
+        assert len(r.json()["items"]) == 1
+
     def test_dense_mode_finds_an_exact_text_match(self, client, alice, monkeypatch):
         # The fake embedding provider has no real semantic signal, so this only proves the
         # dense-search wiring (cosine distance, filtering, ordering) is correct -- an exact

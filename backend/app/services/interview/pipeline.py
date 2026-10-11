@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import Conflict
 from app.domain.enums import ConversationKind, MemoryOrigin, MessageRole, Provenance, SourceKind
+from app.domain.profile_context import describe_profile
 from app.models import Conversation, Memory, PersonProfile
 from app.repositories import conversations as conversations_repo
 from app.repositories import memories as memories_repo
@@ -156,7 +157,7 @@ def complete_interview(
     # and this can simply be retried later once a provider is configured.
     extractor = (get_extractor or get_candidate_extractor)()
     candidates = extractor.extract(
-        segments=segments, profile_context=f"{profile.name} ({profile.relationship})"
+        segments=segments, profile_context=describe_profile(profile)
     )
 
     transcript_hash = hashlib.sha256("\n".join(s.text for s in segments).encode()).hexdigest()

@@ -79,3 +79,25 @@ def test_no_chunk_exceeds_the_configured_budget_by_much():
     chunks = chunk_memory(title="Short title", description=description, **kwargs)
     for chunk in chunks[:-1]:  # the last chunk may carry trailing quotations/overflow
         assert len(chunk.text) <= 260  # budget + title prefix, with slack for one sentence
+
+
+def test_devanagari_text_splits_into_multiple_sentence_chunks():
+    """Regression test: the sentence-boundary regex originally required a Latin capital
+    letter after the terminator, so Hindi/Marathi text (no case distinction, and often
+    terminated with the danda '।' rather than '.') was never split at all."""
+    sentences = " ".join(
+        f"ही वाक्य क्रमांक {i} आहे आणि ती खूप लांब कौटुंबिक कथेचा भाग आहे." for i in range(15)
+    )
+    kwargs = {**SHORT_KWARGS, "max_chars": 250}
+    chunks = chunk_memory(title="आईच्या आठवणी", description=sentences, **kwargs)
+
+    assert len(chunks) > 1
+    for chunk in chunks:
+        assert chunk.text.startswith("आईच्या आठवणी")
+
+
+def test_devanagari_danda_is_a_recognised_sentence_terminator():
+    sentences = " ".join(f"हे वाक्य क्रमांक {i} आहे।" for i in range(20))
+    kwargs = {**SHORT_KWARGS, "max_chars": 150}
+    chunks = chunk_memory(title="शीर्षक", description=sentences, **kwargs)
+    assert len(chunks) > 1

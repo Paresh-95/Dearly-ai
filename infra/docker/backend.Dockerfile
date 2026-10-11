@@ -1,10 +1,12 @@
 FROM python:3.12-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# System deps for ingestion: ffmpeg (video -> audio extraction), tesseract-ocr (best-effort
-# image OCR, never required for a job to succeed), libmagic (upload content-type sniffing).
+# System deps for ingestion: ffmpeg (video -> audio extraction), tesseract-ocr plus Hindi
+# and Marathi language data (best-effort image OCR, never required for a job to succeed —
+# see app/services/extraction/image.py and MC_OCR_LANGUAGES), libmagic (upload content-type
+# sniffing).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ffmpeg tesseract-ocr libmagic1 \
+      ffmpeg tesseract-ocr tesseract-ocr-hin tesseract-ocr-mar libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
