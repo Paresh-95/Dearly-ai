@@ -3,22 +3,28 @@
 A private platform for preserving a loved one's memories and asking questions answered only from
 those memories. See `docs/architecture/blueprint.md` for the full architecture and roadmap.
 
-**Status:** Milestone 5 — the above, plus retrieval: `POST /api/v1/retrieval/search` runs
-dense (pgvector cosine) and/or keyword (Postgres full-text) search over a profile's approved,
-indexed memories, fuses both with Reciprocal Rank Fusion in hybrid mode, reranks with a
-transparent lexical-overlap default, and supports category/date/people filters. No chat or
-answer generation yet — this milestone stops at ranked evidence, which is as far as the
-brief's roadmap puts it (see `docs/architecture/blueprint.md`). An evaluation harness
-(`evals/`) compares dense/keyword/hybrid on a small synthetic fixture dataset; running it is
-what caught and fixed a real bug (`docs/decisions/0006-keyword-query-or-not-and.md`) —
-**read `evals/README.md` before trusting any number it prints**, since dense/hybrid results
-are only meaningful once `MC_OPENAI_API_KEY` is actually set. See also
-`docs/decisions/0002-rls-deferred.md` for a known isolation gap (no Postgres RLS yet;
-enforcement today is at the repository/query layer plus DB-level composite FKs),
+**Status:** Milestone 6 — the above, plus grounded conversation: `/ask` is a real chat UI
+over `POST /api/v1/conversations/{id}/messages`, which retrieves evidence (Milestone 5),
+asks an LLM to answer *only* from it with structured output (an answer plus which passages
+it actually used), strips any citation the model claims that isn't in what was retrieved,
+and persists both sides of the turn. No evidence at all skips the LLM entirely (a templated,
+zero-risk answer); evidence exists but no `MC_OPENAI_API_KEY` configured gives an honest
+"can't write an answer right now" rather than a fabricated one — verified end-to-end against
+the real deployed stack, not just unit tests. The system prompt enforces the brief's
+grounding rules (never invent a memory/quotation/date, distinguish a family member's
+recollection from the person's own recorded words, flag conflicting memories, treat retrieved
+text as data never instructions) — see `app/services/providers/generation.py` for the actual
+prompt. See `docs/decisions/0007-message-ordering.md` for a real ordering bug a test caught
+(two messages in one request tied on Postgres's transaction-constant `now()`).
+
+See also `docs/decisions/0002-rls-deferred.md` for a known isolation gap (no Postgres RLS
+yet; enforcement today is at the repository/query layer plus DB-level composite FKs),
 `docs/decisions/0003-provider-fallbacks.md` for why an unconfigured LLM/STT/embedding
-provider fails cleanly instead of fabricating output, and
-`docs/decisions/0004-chunk-idempotency.md` / `0005-synchronous-indexing.md` for two
-indexing-specific design choices.
+provider fails cleanly instead of fabricating output, `docs/decisions/0004-chunk-idempotency.md`
+/ `0005-synchronous-indexing.md` for two indexing-specific design choices, and
+`docs/decisions/0006-keyword-query-or-not-and.md` plus **`evals/README.md`** for the
+retrieval evaluation harness and why its dense/hybrid numbers need a real embedding
+provider configured before they mean anything.
 
 ## Run locally
 

@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     auth,
     consents,
+    conversations,
     health,
     ingestion_jobs,
     memories,
@@ -22,3 +23,4 @@ api_router.include_router(uploads.router)
 api_router.include_router(sources.router)
 api_router.include_router(ingestion_jobs.router)
 api_router.include_router(retrieval.router)
+api_router.include_router(conversations.router)

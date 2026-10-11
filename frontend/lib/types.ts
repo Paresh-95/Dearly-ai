@@ -124,3 +124,37 @@ export interface Source {
 export interface SourceList {
   items: Source[];
 }
+
+export interface Conversation {
+  id: string;
+  person_profile_id: string;
+  kind: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationList {
+  items: Conversation[];
+}
+
+export interface CitedMemory {
+  memory_id: string;
+  title: string;
+  category: string | null;
+  provenance: string;
+}
+
+export type MessageRole = "user" | "assistant" | "system";
+
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
+  content: string;
+  cited_memories: CitedMemory[];
+  created_at: string;
+}
+
+export interface ChatMessageList {
+  items: ChatMessage[];
+}

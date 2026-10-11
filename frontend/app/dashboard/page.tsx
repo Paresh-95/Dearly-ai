@@ -135,7 +135,11 @@ function DashboardPageInner() {
           </Card>
 
           <div className="flex flex-wrap gap-3">
-            <Button render={<Link href={`/memories/new?profile=${profileId}`} />}>
+            <Button render={<Link href={`/ask?profile=${profileId}`} />}>Ask AI</Button>
+            <Button
+              variant="outline"
+              render={<Link href={`/memories/new?profile=${profileId}`} />}
+            >
               Write a memory
             </Button>
             <Button
