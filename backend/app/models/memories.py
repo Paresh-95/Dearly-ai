@@ -168,14 +168,15 @@ class MemoryChunk(IdMixin, TimestampMixin, Base):
             ondelete="CASCADE",
         ),
         UniqueConstraint("memory_id", "chunk_index", name="uq_memory_chunks_memory_id_chunk_index"),
-        UniqueConstraint(
-            "person_profile_id", "content_hash", name="uq_memory_chunks_profile_content_hash"
-        ),
         enum_check("index_status", IndexStatus),
         CheckConstraint(
             "(index_status = 'indexed') = (embedding IS NOT NULL)",
             name="indexed_has_embedding",
         ),
+        # Not unique (see migration 0002 / docs/decisions/0004-chunk-idempotency.md): two
+        # different memories may legitimately share identical chunk text. content_hash is
+        # used in application code to decide whether a chunk needs re-embedding on reindex.
+        Index("ix_memory_chunks_content_hash", "person_profile_id", "content_hash"),
         Index("ix_memory_chunks_tsv", "tsv", postgresql_using="gin"),
         Index(
             "ix_memory_chunks_embedding",

@@ -22,6 +22,7 @@ from app.domain.memory_rules import (
     next_status_on_update,
 )
 from app.models import Feedback, Memory, MemoryPerson, MemorySource, SourceSegment
+from app.repositories import memory_chunks as chunks_repo
 from app.schemas.extraction import MemoryCandidate
 from app.schemas.memory import MemoryCreate, MemoryUpdate
 
@@ -149,6 +150,7 @@ def update(db: Session, memory: Memory, data: MemoryUpdate) -> Memory:
         ensure_transition_allowed(memory.status, target_status)
     except InvalidTransition as exc:
         raise Conflict(str(exc)) from exc
+    was_approved = memory.status == MemoryStatus.APPROVED
 
     for field, value in payload.items():
         setattr(memory, field, value)
@@ -158,6 +160,10 @@ def update(db: Session, memory: Memory, data: MemoryUpdate) -> Memory:
     memory.approved_at = datetime.now(UTC) if target_status == MemoryStatus.APPROVED else None
 
     db.flush()
+    if was_approved and target_status != MemoryStatus.APPROVED:
+        # Leaving `approved`: the indexed content is no longer current/trusted, so it must
+        # not stay searchable. Re-approving later re-chunks and re-embeds from scratch.
+        chunks_repo.clear_chunks(db, memory.id)
     _attach_people(db, [memory])
     return memory
 
@@ -244,6 +250,7 @@ def approve(db: Session, memory: Memory) -> Memory:
     memory.status = MemoryStatus.APPROVED
     memory.approved_at = datetime.now(UTC)
     db.flush()
+    chunks_repo.reindex_memory(db, memory)
     _attach_people(db, [memory])
     return memory
 
@@ -253,8 +260,11 @@ def reject(db: Session, memory: Memory, note: str | None) -> Memory:
         ensure_transition_allowed(memory.status, MemoryStatus.REJECTED)
     except InvalidTransition as exc:
         raise Conflict(str(exc)) from exc
+    was_approved = memory.status == MemoryStatus.APPROVED
     memory.status = MemoryStatus.REJECTED
     memory.approved_at = None
+    if was_approved:
+        chunks_repo.clear_chunks(db, memory.id)
     if note:
         db.add(
             Feedback(

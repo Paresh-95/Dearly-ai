@@ -45,10 +45,15 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
     openai_chat_model: str = "gpt-5-mini"
     openai_stt_model: str = "whisper-1"
+    openai_embedding_model: str = "text-embedding-3-small"
 
     # --- Ingestion worker ---
     worker_poll_seconds: float = 2.0
     worker_max_attempts: int = 3
+
+    # --- Memory-aware chunking (Milestone 4). A short memory becomes one chunk; a longer
+    # one is split on sentence boundaries so no chunk exceeds this many characters. ---
+    chunk_max_chars: int = 1200
 
     def validate_for_environment(self) -> None:
         if self.environment != "development" and self.jwt_secret.startswith("dev-only"):

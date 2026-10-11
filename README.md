@@ -3,15 +3,19 @@
 A private platform for preserving a loved one's memories and asking questions answered only from
 those memories. See `docs/architecture/blueprint.md` for the full architecture and roadmap.
 
-**Status:** Milestone 3 — the above, plus file ingestion: uploads (text/PDF/DOCX/WhatsApp
-export/image/audio/video) to private object storage, a Postgres-queued worker process that
-extracts text (and, when `MC_OPENAI_API_KEY` is set, proposes candidate memories for the
-existing review queue), and an Upload Centre page showing job status/progress/errors.
-Chunking/embeddings, retrieval and chat are not implemented yet. See
-`docs/decisions/0002-rls-deferred.md` for a known isolation gap (no Postgres RLS yet;
-enforcement today is at the repository/query layer plus DB-level composite FKs) and
-`docs/decisions/0003-provider-fallbacks.md` for why an unconfigured LLM/STT provider fails
-an ingestion job cleanly instead of fabricating output.
+**Status:** Milestone 4 — the above, plus memory indexing: approving a memory chunks it
+(memory-aware: short memories stay intact, long ones split on sentence boundaries) and
+embeds each chunk via a configurable embedding provider. Editing or rejecting an approved
+memory clears its chunks immediately (re-approving re-chunks from the current content); an
+unconfigured embedding provider leaves chunks `pending` rather than blocking approval, and
+`POST /memories/{id}/reindex` retries them once one is configured. Retrieval (actually
+*searching* those embeddings) and chat are not implemented yet — see
+`docs/architecture/blueprint.md` for the roadmap. See `docs/decisions/0002-rls-deferred.md`
+for a known isolation gap (no Postgres RLS yet; enforcement today is at the repository/query
+layer plus DB-level composite FKs), `docs/decisions/0003-provider-fallbacks.md` for why an
+unconfigured LLM/STT/embedding provider fails cleanly instead of fabricating output, and
+`docs/decisions/0004-chunk-idempotency.md` / `0005-synchronous-indexing.md` for two
+indexing-specific design choices.
 
 ## Run locally
 

@@ -1,10 +1,10 @@
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.domain.enums import MemoryStatus
+from app.domain.enums import IndexStatus, MemoryStatus
 
 # Only these two statuses may be requested through the generic update endpoint; moving to
 # `approved` or `rejected` goes through the dedicated /approve and /reject actions so the
@@ -96,3 +96,22 @@ class MemoryList(BaseModel):
     items: list[MemoryRead]
     next_cursor: str | None
     total: int
+
+
+class MemoryChunkRead(BaseModel):
+    """Never includes the raw embedding vector — 1536 floats is pure noise to a client and
+    this is a debugging/transparency view, not the retrieval API (that's Milestone 5)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    chunk_index: int
+    text: str
+    index_status: IndexStatus
+    embedding_model: str | None
+    meta: dict[str, Any]
+    created_at: datetime
+
+
+class MemoryChunkList(BaseModel):
+    items: list[MemoryChunkRead]

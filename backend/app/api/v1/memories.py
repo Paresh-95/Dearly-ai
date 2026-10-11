@@ -3,11 +3,14 @@ from uuid import UUID
 from fastapi import APIRouter, Query, status
 
 from app.api.deps import Auth, DbSession, OwnedMemory
-from app.core.errors import NotFound
+from app.core.errors import Conflict, NotFound
 from app.domain.enums import MemoryStatus
 from app.repositories import memories as repo
+from app.repositories import memory_chunks as chunks_repo
 from app.repositories import profiles as profile_repo
 from app.schemas.memory import (
+    MemoryChunkList,
+    MemoryChunkRead,
     MemoryCreate,
     MemoryList,
     MemoryRead,
@@ -85,3 +88,20 @@ def reject_memory(memory: OwnedMemory, body: MemoryRejectRequest, db: DbSession)
     memory = repo.reject(db, memory, body.note)
     db.commit()
     return MemoryRead.model_validate(memory)
+
+
+@router.get("/{memory_id}/chunks", response_model=MemoryChunkList)
+def get_memory_chunks(memory: OwnedMemory, db: DbSession) -> MemoryChunkList:
+    chunks = chunks_repo.list_for_memory(db, memory.id)
+    return MemoryChunkList(items=[MemoryChunkRead.model_validate(c) for c in chunks])
+
+
+@router.post("/{memory_id}/reindex", response_model=MemoryChunkList)
+def reindex_memory(memory: OwnedMemory, db: DbSession) -> MemoryChunkList:
+    """Retries chunking/embedding for an approved memory — mainly useful to pick up chunks
+    left `pending` because no embedding provider was configured the first time around."""
+    if memory.status != MemoryStatus.APPROVED:
+        raise Conflict("Only an approved memory can be (re)indexed.")
+    chunks = chunks_repo.reindex_memory(db, memory)
+    db.commit()
+    return MemoryChunkList(items=[MemoryChunkRead.model_validate(c) for c in chunks])
