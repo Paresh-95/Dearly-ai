@@ -20,7 +20,7 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MC_S3_ACCESS_KEY:-minioadmin}
@@ -35,15 +35,36 @@ services:
     build:
       context: .
       dockerfile: infra/docker/backend.Dockerfile
-    environment:
+    environment: &backend_env
       MC_DATABASE_URL: postgresql+psycopg://memory:${MC_DB_PASSWORD:-memory}@db:5432/memory_companion
       MC_JWT_SECRET: ${MC_JWT_SECRET:-dev-only-insecure-secret-change-me-0123456789}
       MC_CORS_ORIGINS: '["http://localhost:3100"]'
+      MC_STORAGE_BACKEND: s3
+      MC_S3_ENDPOINT_URL: http://minio:9000
+      MC_S3_ACCESS_KEY: ${MC_S3_ACCESS_KEY:-minioadmin}
+      MC_S3_SECRET_KEY: ${MC_S3_SECRET_KEY:-minioadmin}
+      MC_OPENAI_API_KEY: ${MC_OPENAI_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_started
     ports:
       - "${MC_BACKEND_PORT:-8100}:8000"
+
+  # Same image and config as `backend`, running the ingestion queue consumer instead of the
+  # API server. Scale with `docker compose up --scale worker=3` if ingestion backs up.
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+    environment: *backend_env
+    command: ["python", "-m", "app.workers.ingestion_worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
 
   frontend:
     build:

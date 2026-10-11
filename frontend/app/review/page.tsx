@@ -57,6 +57,16 @@ function ReviewCard({ memory, profileId }: { memory: Memory; profileId: string }
             With: {memory.people.map((p) => p.name).join(", ")}
           </p>
         )}
+        {memory.origin === "extracted" && (
+          <p className="text-sm text-muted-foreground">
+            Suggested from an uploaded file — not yet confirmed as accurate.
+          </p>
+        )}
+        {memory.is_uncertain && (
+          <p className="rounded-md bg-muted/40 p-2 text-sm">
+            ⚠ {memory.uncertainty_note || "This detail is uncertain and worth double-checking."}
+          </p>
+        )}
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}

@@ -16,6 +16,13 @@ dependencies = [
   "argon2-cffi",
   "pyjwt",
   "python-multipart",
+  "pypdf",
+  "python-docx",
+  "pillow",
+  "python-magic",
+  "pytesseract",
+  "openai",
+  "boto3",
 ]
 
 [dependency-groups]

@@ -80,3 +80,47 @@ export const MEMORY_CATEGORIES = [
   "communication_style",
   "other",
 ] as const;
+
+export const UPLOAD_KINDS = [
+  { value: "text", label: "Text document (.txt)" },
+  { value: "pdf", label: "PDF" },
+  { value: "docx", label: "Word document (.docx)" },
+  { value: "whatsapp", label: "WhatsApp chat export" },
+  { value: "image", label: "Photo" },
+  { value: "audio", label: "Audio recording" },
+  { value: "video", label: "Video" },
+] as const;
+
+export type JobState = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+
+export interface IngestionJob {
+  id: string;
+  source_id: string;
+  person_profile_id: string;
+  state: JobState;
+  stage: string | null;
+  progress: number | null;
+  attempts: number;
+  error: string | null;
+  created_at: string;
+  finished_at: string | null;
+}
+
+export interface IngestionJobList {
+  items: IngestionJob[];
+}
+
+export interface Source {
+  id: string;
+  person_profile_id: string;
+  kind: string;
+  provenance: string;
+  filename: string | null;
+  content_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
+}
+
+export interface SourceList {
+  items: Source[];
+}

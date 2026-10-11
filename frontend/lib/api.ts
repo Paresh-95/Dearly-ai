@@ -35,7 +35,12 @@ async function toApiError(res: Response): Promise<ApiError> {
 
 async function raw(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  // FormData sets its own multipart boundary in the Content-Type header; the browser only
+  // does that when we don't set one ourselves, so it must be left alone here.
+  const isFormData = init.body instanceof FormData;
+  if (init.body && !isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   const token = tokenStore.get();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   return fetch(`${API_URL}/api/v1${path}`, { ...init, headers, credentials: "include" });
@@ -74,6 +79,8 @@ export const get = <T>(path: string, params?: Record<string, string | number | u
 export const post = <T>(path: string, body?: unknown) => api<T>(path, withBody("POST", body));
 export const patch = <T>(path: string, body?: unknown) => api<T>(path, withBody("PATCH", body));
 export const del = (path: string) => api<void>(path, { method: "DELETE" });
+export const postForm = <T>(path: string, form: FormData) =>
+  api<T>(path, { method: "POST", body: form });
 
 export function toQueryString(params?: Record<string, string | number | undefined>): string {
   if (!params) return "";

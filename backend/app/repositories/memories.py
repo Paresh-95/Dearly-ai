@@ -21,7 +21,8 @@ from app.domain.memory_rules import (
     ensure_transition_allowed,
     next_status_on_update,
 )
-from app.models import Feedback, Memory, MemoryPerson
+from app.models import Feedback, Memory, MemoryPerson, MemorySource, SourceSegment
+from app.schemas.extraction import MemoryCandidate
 from app.schemas.memory import MemoryCreate, MemoryUpdate
 
 
@@ -155,6 +156,80 @@ def update(db: Session, memory: Memory, data: MemoryUpdate) -> Memory:
         _replace_people(db, memory, people)
     memory.status = target_status
     memory.approved_at = datetime.now(UTC) if target_status == MemoryStatus.APPROVED else None
+
+    db.flush()
+    _attach_people(db, [memory])
+    return memory
+
+
+def create_from_candidate(
+    db: Session,
+    user_id: UUID,
+    person_profile_id: UUID,
+    source_id: UUID,
+    candidate: MemoryCandidate,
+    segments_by_ordinal: dict[int, SourceSegment],
+) -> Memory:
+    """Writes one LLM-proposed candidate as an `awaiting_review` memory with `origin=
+    extracted`, linking it back to the exact passages it was drawn from. Confidence below
+    0.6 is surfaced as `is_uncertain` so the review queue flags it without the reviewer
+    having to open each one to find out."""
+    memory = Memory(
+        user_id=user_id,
+        person_profile_id=person_profile_id,
+        title=candidate.title,
+        description=candidate.description,
+        status=MemoryStatus.AWAITING_REVIEW,
+        origin=MemoryOrigin.EXTRACTED,
+        provenance=Provenance.DOCUMENT,
+        category=candidate.category,
+        date_text=candidate.date_text,
+        location=candidate.location,
+        confidence=candidate.confidence,
+        is_uncertain=candidate.confidence < 0.6,
+        uncertainty_note=candidate.uncertainty_note,
+        quotations=[{"text": q} for q in candidate.quotations],
+    )
+    db.add(memory)
+    db.flush()
+
+    for p in candidate.people:
+        db.add(
+            MemoryPerson(
+                user_id=user_id,
+                person_profile_id=person_profile_id,
+                memory_id=memory.id,
+                name=p.name,
+                relationship=p.relationship,
+            )
+        )
+
+    linked_segments = {
+        segments_by_ordinal[o]
+        for o in candidate.supporting_segment_ordinals
+        if o in segments_by_ordinal
+    }
+    for seg in linked_segments:
+        db.add(
+            MemorySource(
+                user_id=user_id,
+                person_profile_id=person_profile_id,
+                memory_id=memory.id,
+                source_id=source_id,
+                segment_id=seg.id,
+            )
+        )
+    if not linked_segments:
+        # No valid ordinal came back from the model; still record provenance at the
+        # source level so "view original source" has somewhere to point.
+        db.add(
+            MemorySource(
+                user_id=user_id,
+                person_profile_id=person_profile_id,
+                memory_id=memory.id,
+                source_id=source_id,
+            )
+        )
 
     db.flush()
     _attach_people(db, [memory])

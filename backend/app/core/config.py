@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -24,6 +25,30 @@ class Settings(BaseSettings):
     # Embedding dimension is baked into the pgvector column by migration 0001.
     # Changing it requires a new migration plus a full reindex.
     embedding_dim: int = 1536
+
+    # --- Object storage for uploaded originals. "local" (default) needs no setup and is
+    # what tests use; "s3" talks to the MinIO container (or any S3-compatible endpoint). ---
+    storage_backend: Literal["local", "s3"] = "local"
+    storage_local_dir: str = "./data/uploads"
+    s3_endpoint_url: str = "http://localhost:9100"
+    s3_access_key: str = "minioadmin"
+    s3_secret_key: str = "minioadmin"
+    s3_bucket: str = "memory-companion"
+    s3_region: str = "us-east-1"
+
+    max_upload_mb: int = 50
+
+    # --- External providers. All optional: leaving them unset is a supported state, not an
+    # error — the corresponding ingestion step then fails its job with a clear, honest
+    # message instead of fabricating output. See docs/decisions/0003-provider-fallbacks.md ---
+    openai_api_key: str | None = None
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_chat_model: str = "gpt-5-mini"
+    openai_stt_model: str = "whisper-1"
+
+    # --- Ingestion worker ---
+    worker_poll_seconds: float = 2.0
+    worker_max_attempts: int = 3
 
     def validate_for_environment(self) -> None:
         if self.environment != "development" and self.jwt_secret.startswith("dev-only"):
