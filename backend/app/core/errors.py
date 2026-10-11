@@ -35,6 +35,15 @@ class Conflict(AppError):
     code = "conflict"
 
 
+class ServiceUnavailable(AppError):
+    """An external provider (LLM, STT, embeddings) isn't configured. Used where that can
+    surface synchronously to an API caller — ingestion/indexing instead record this on a
+    job/chunk and keep going, per docs/decisions/0003-provider-fallbacks.md."""
+
+    status_code = 503
+    code = "service_unavailable"
+
+
 def _envelope(status: int, code: str, message: str, details: Any = None) -> JSONResponse:
     return JSONResponse(
         status_code=status,

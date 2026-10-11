@@ -19,9 +19,11 @@ def create(
     provenance: Provenance,
     filename: str | None,
     content_type: str | None,
-    size_bytes: int,
+    size_bytes: int | None = None,
     sha256: str,
-    storage_key: str,
+    # None for a source with nothing in object storage (e.g. an interview transcript,
+    # whose content lives in `messages` already — see app/services/interview/pipeline.py).
+    storage_key: str | None = None,
 ) -> Source:
     source = Source(
         id=id,
@@ -42,6 +44,17 @@ def create(
 
 def get_owned(db: Session, user_id: UUID, source_id: UUID) -> Source | None:
     return db.scalar(select(Source).where(Source.id == source_id, Source.user_id == user_id))
+
+
+def get_by_conversation(db: Session, conversation_id: UUID) -> Source | None:
+    """Finds the interview-transcript source for a conversation, if one was already created
+    by completing it — used to make completing an interview idempotent (see
+    app/services/interview/pipeline.py)."""
+    stmt = select(Source).where(
+        Source.kind == SourceKind.INTERVIEW,
+        Source.meta["conversation_id"].astext == str(conversation_id),
+    )
+    return db.scalar(stmt)
 
 
 def list_for_user(

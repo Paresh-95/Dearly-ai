@@ -175,19 +175,24 @@ def create_from_candidate(
     source_id: UUID,
     candidate: MemoryCandidate,
     segments_by_ordinal: dict[int, SourceSegment],
+    *,
+    origin: MemoryOrigin = MemoryOrigin.EXTRACTED,
+    provenance: Provenance = Provenance.DOCUMENT,
 ) -> Memory:
-    """Writes one LLM-proposed candidate as an `awaiting_review` memory with `origin=
-    extracted`, linking it back to the exact passages it was drawn from. Confidence below
-    0.6 is surfaced as `is_uncertain` so the review queue flags it without the reviewer
-    having to open each one to find out."""
+    """Writes one LLM-proposed candidate as an `awaiting_review` memory, linking it back to
+    the exact passages it was drawn from. Used by both file ingestion (origin=extracted,
+    provenance=document — the default) and the AI interviewer (origin=interview,
+    provenance=family_recollection — the person being interviewed, recalling, not the
+    deceased's own words). Confidence below 0.6 is surfaced as `is_uncertain` so the review
+    queue flags it without the reviewer having to open each one to find out."""
     memory = Memory(
         user_id=user_id,
         person_profile_id=person_profile_id,
         title=candidate.title,
         description=candidate.description,
         status=MemoryStatus.AWAITING_REVIEW,
-        origin=MemoryOrigin.EXTRACTED,
-        provenance=Provenance.DOCUMENT,
+        origin=origin,
+        provenance=provenance,
         category=candidate.category,
         date_text=candidate.date_text,
         location=candidate.location,

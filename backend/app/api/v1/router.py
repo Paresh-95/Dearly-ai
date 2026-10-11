@@ -6,6 +6,7 @@ from app.api.v1 import (
     conversations,
     health,
     ingestion_jobs,
+    interviews,
     memories,
     profiles,
     retrieval,
@@ -24,3 +25,4 @@ api_router.include_router(sources.router)
 api_router.include_router(ingestion_jobs.router)
 api_router.include_router(retrieval.router)
 api_router.include_router(conversations.router)
+api_router.include_router(interviews.router)

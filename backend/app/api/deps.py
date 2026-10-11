@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import NotFound, Unauthenticated
 from app.core.security import decode_token
 from app.db.session import get_db
+from app.domain.enums import ConversationKind
 from app.models import Conversation, Memory, PersonProfile, User
 from app.repositories import conversations as conversation_repo
 from app.repositories import memories as memory_repo
@@ -78,3 +79,18 @@ def get_owned_conversation(conversation_id: UUID, db: DbSession, auth: Auth) -> 
 
 
 OwnedConversation = Annotated[Conversation, Depends(get_owned_conversation)]
+
+
+def get_owned_interview(interview_id: UUID, db: DbSession, auth: Auth) -> Conversation:
+    """A conversation created by, and only visible through, the /interviews routes — an
+    'ask' conversation at the same id looks like a missing interview, same as any other
+    cross-tenant mismatch in this codebase."""
+    conversation = conversation_repo.get_owned(
+        db, auth.user_id, interview_id, kind=ConversationKind.INTERVIEW
+    )
+    if conversation is None:
+        raise NotFound("Interview not found")
+    return conversation
+
+
+OwnedInterview = Annotated[Conversation, Depends(get_owned_interview)]

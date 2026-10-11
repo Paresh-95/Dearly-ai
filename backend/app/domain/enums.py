@@ -33,6 +33,7 @@ class SourceKind(StrEnum):
     IMAGE = "image"
     AUDIO = "audio"
     VIDEO = "video"
+    INTERVIEW = "interview"  # the AI Memory Interviewer's own transcript, as its own source
 
 
 class JobState(StrEnum):

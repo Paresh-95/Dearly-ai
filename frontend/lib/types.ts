@@ -158,3 +158,20 @@ export interface ChatMessage {
 export interface ChatMessageList {
   items: ChatMessage[];
 }
+
+export interface InterviewTurn {
+  id: string;
+  role: MessageRole;
+  content: string;
+  done: boolean;
+  created_at: string;
+}
+
+export interface InterviewStartResponse {
+  conversation_id: string;
+  message: InterviewTurn;
+}
+
+export interface InterviewCompleteResponse {
+  candidates: Memory[];
+}

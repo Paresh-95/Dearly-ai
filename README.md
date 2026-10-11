@@ -3,19 +3,30 @@
 A private platform for preserving a loved one's memories and asking questions answered only from
 those memories. See `docs/architecture/blueprint.md` for the full architecture and roadmap.
 
-**Status:** Milestone 6 — the above, plus grounded conversation: `/ask` is a real chat UI
-over `POST /api/v1/conversations/{id}/messages`, which retrieves evidence (Milestone 5),
-asks an LLM to answer *only* from it with structured output (an answer plus which passages
-it actually used), strips any citation the model claims that isn't in what was retrieved,
-and persists both sides of the turn. No evidence at all skips the LLM entirely (a templated,
-zero-risk answer); evidence exists but no `MC_OPENAI_API_KEY` configured gives an honest
-"can't write an answer right now" rather than a fabricated one — verified end-to-end against
-the real deployed stack, not just unit tests. The system prompt enforces the brief's
-grounding rules (never invent a memory/quotation/date, distinguish a family member's
-recollection from the person's own recorded words, flag conflicting memories, treat retrieved
-text as data never instructions) — see `app/services/providers/generation.py` for the actual
-prompt. See `docs/decisions/0007-message-ordering.md` for a real ordering bug a test caught
-(two messages in one request tied on Postgres's transaction-constant `now()`).
+**Status:** Milestone 7 — the above, plus the AI Memory Interviewer: `/interview` asks one
+gentle, open-ended question at a time (never leading, never presupposing a detail that
+hasn't been said), follows up naturally using conversation context, and on request turns
+the transcript into candidate memories through the *same* extractor Milestone 3 built for
+uploaded documents — they land in the ordinary review queue (`origin=interview`,
+`provenance=family_recollection`) with no new review UI needed. Finishing is explicit and
+reversible: nothing is ever auto-approved, finishing with no provider configured leaves
+nothing half-written (a clean, retryable error), and finishing twice is rejected rather than
+duplicating candidates. The interview transcript itself becomes a `Source` for provenance,
+reusing Milestone 3's segment/citation machinery rather than inventing a parallel path.
+
+Milestone 6 added grounded conversation: `/ask` is a real chat UI over `POST
+/api/v1/conversations/{id}/messages`, which retrieves evidence (Milestone 5), asks an LLM to
+answer *only* from it with structured output (an answer plus which passages it actually
+used), strips any citation the model claims that isn't in what was retrieved, and persists
+both sides of the turn. No evidence at all skips the LLM entirely (a templated, zero-risk
+answer); evidence exists but no `MC_OPENAI_API_KEY` configured gives an honest "can't write
+an answer right now" rather than a fabricated one — verified end-to-end against the real
+deployed stack, not just unit tests. The system prompt enforces the brief's grounding rules
+(never invent a memory/quotation/date, distinguish a family member's recollection from the
+person's own recorded words, flag conflicting memories, treat retrieved text as data never
+instructions) — see `app/services/providers/generation.py` for the actual prompt. See
+`docs/decisions/0007-message-ordering.md` for a real ordering bug a test caught (two
+messages in one request tied on Postgres's transaction-constant `now()`).
 
 See also `docs/decisions/0002-rls-deferred.md` for a known isolation gap (no Postgres RLS
 yet; enforcement today is at the repository/query layer plus DB-level composite FKs),

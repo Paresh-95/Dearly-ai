@@ -89,7 +89,7 @@ def get_candidate_extractor() -> MemoryCandidateExtractor:
     if not s.openai_api_key:
         raise ProviderNotConfigured(
             "No LLM provider is configured (MC_OPENAI_API_KEY is unset), "
-            "so memory candidates cannot be extracted from this document."
+            "so memory candidates cannot be extracted yet."
         )
     return OpenAICandidateExtractor(
         api_key=s.openai_api_key, base_url=s.openai_base_url, model=s.openai_chat_model

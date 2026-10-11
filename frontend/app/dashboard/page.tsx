@@ -154,6 +154,9 @@ function DashboardPageInner() {
             <Button variant="outline" render={<Link href={`/uploads?profile=${profileId}`} />}>
               Upload files
             </Button>
+            <Button variant="outline" render={<Link href={`/interview?profile=${profileId}`} />}>
+              Memory interview
+            </Button>
           </div>
 
           {recent.length > 0 && (
