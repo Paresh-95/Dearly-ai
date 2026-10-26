@@ -1,22 +1,22 @@
-from collections.abc import Iterator
-from functools import lru_cache
+from collections.abc import AsyncGenerator
 
-from sqlalchemy import Engine, create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core.config import get_settings
+from app.core.config import settings
+from app.db.models import Base
 
-
-@lru_cache
-def get_engine() -> Engine:
-    return create_engine(get_settings().database_url, pool_pre_ping=True)
+engine = create_async_engine(settings.database_url, echo=False)
+SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
-@lru_cache
-def get_sessionmaker() -> sessionmaker[Session]:
-    return sessionmaker(bind=get_engine(), expire_on_commit=False)
+async def init_db() -> None:
+    async with engine.begin() as conn:
+        from sqlalchemy import text
+
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        await conn.run_sync(Base.metadata.create_all)
 
 
-def get_db() -> Iterator[Session]:
-    with get_sessionmaker()() as session:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionLocal() as session:
         yield session

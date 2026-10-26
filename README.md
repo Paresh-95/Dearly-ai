@@ -1,79 +1,79 @@
-# Memory Companion
+# AI Memorial Persona — MVP
 
-A private platform for preserving a loved one's memories and asking questions answered only from
-those memories. See `docs/architecture/blueprint.md` for the full architecture and roadmap.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the design. This is a push-to-talk
+voice-conversation MVP: upload memories + a few voice clips of a loved one,
+clone their voice, then talk to an AI persona grounded in those memories.
 
-**Multi-language note:** retrieval, chunking, OCR and every LLM prompt have been checked
-against Hindi/Marathi (Devanagari script) specifically, not just assumed to work — this
-found and fixed real bugs (zero keyword-search results for a pure-Devanagari query; chunking
-never splitting Hindi/Marathi text into sentences; OCR defaulting to English-only). See
-`docs/decisions/0008-multilingual-tokenization.md`. The frontend's own UI text (buttons,
-labels) is still English-only — that's a separate, larger localization effort, not done here.
-
-**Status:** Milestone 7 — the above, plus the AI Memory Interviewer: `/interview` asks one
-gentle, open-ended question at a time (never leading, never presupposing a detail that
-hasn't been said), follows up naturally using conversation context, and on request turns
-the transcript into candidate memories through the *same* extractor Milestone 3 built for
-uploaded documents — they land in the ordinary review queue (`origin=interview`,
-`provenance=family_recollection`) with no new review UI needed. Finishing is explicit and
-reversible: nothing is ever auto-approved, finishing with no provider configured leaves
-nothing half-written (a clean, retryable error), and finishing twice is rejected rather than
-duplicating candidates. The interview transcript itself becomes a `Source` for provenance,
-reusing Milestone 3's segment/citation machinery rather than inventing a parallel path.
-
-Milestone 6 added grounded conversation: `/ask` is a real chat UI over `POST
-/api/v1/conversations/{id}/messages`, which retrieves evidence (Milestone 5), asks an LLM to
-answer *only* from it with structured output (an answer plus which passages it actually
-used), strips any citation the model claims that isn't in what was retrieved, and persists
-both sides of the turn. No evidence at all skips the LLM entirely (a templated, zero-risk
-answer); evidence exists but no `MC_OPENAI_API_KEY` configured gives an honest "can't write
-an answer right now" rather than a fabricated one — verified end-to-end against the real
-deployed stack, not just unit tests. The system prompt enforces the brief's grounding rules
-(never invent a memory/quotation/date, distinguish a family member's recollection from the
-person's own recorded words, flag conflicting memories, treat retrieved text as data never
-instructions) — see `app/services/providers/generation.py` for the actual prompt. See
-`docs/decisions/0007-message-ordering.md` for a real ordering bug a test caught (two
-messages in one request tied on Postgres's transaction-constant `now()`).
-
-See also `docs/decisions/0002-rls-deferred.md` for a known isolation gap (no Postgres RLS
-yet; enforcement today is at the repository/query layer plus DB-level composite FKs),
-`docs/decisions/0003-provider-fallbacks.md` for why an unconfigured LLM/STT/embedding
-provider fails cleanly instead of fabricating output, `docs/decisions/0004-chunk-idempotency.md`
-/ `0005-synchronous-indexing.md` for two indexing-specific design choices, and
-`docs/decisions/0006-keyword-query-or-not-and.md` plus **`evals/README.md`** for the
-retrieval evaluation harness and why its dense/hybrid numbers need a real embedding
-provider configured before they mean anything.
-
-## Run locally
+## 1. Start Postgres (pgvector) and MinIO
 
 ```bash
-cp .env.example .env
-docker compose up -d db minio      # Postgres 17 + pgvector on :5433, MinIO (S3) on :9100
-cd backend && uv sync && uv run alembic upgrade head
-uv run uvicorn app.main:app --port 8100 --reload     # API docs: http://localhost:8100/docs
-uv run python -m app.workers.ingestion_worker        # in another shell, for uploads to be processed
-cd ../frontend && npm install && NEXT_PUBLIC_API_URL=http://localhost:8100 npm run dev -- -p 3100
+docker compose up -d
 ```
 
-Or everything in containers: `docker compose up --build` (brings up `backend`, `worker` and
-`frontend` alongside `db`/`minio`). Set `MC_OPENAI_API_KEY` in `.env` to enable real speech-to-
-text and LLM-based memory suggestions from uploads; without it, uploads still extract and
-store text, but candidate-memory generation fails that job step with a clear message (see
-`docs/decisions/0003-provider-fallbacks.md`). Local dev defaults to on-disk storage
-(`MC_STORAGE_BACKEND=local`); the Docker Compose services use the `s3`/MinIO backend instead.
+This also starts MinIO (S3-compatible object storage) for voice samples and
+generated reply audio — console at http://localhost:9001 (login
+`minioadmin` / `minioadmin123`, see docker-compose.yml). The app creates its
+bucket automatically on startup.
 
-## Tests
+> The backend runs on port **8001**, not the more conventional 8000 — on
+> Windows, Docker Desktop's own backend process (`com.docker.backend.exe`)
+> binds port 8000 for itself and reclaims it on every restart, so this
+> project avoids the conflict rather than fight it each time Docker starts.
+
+## 2. Backend
 
 ```bash
-cd backend && uv run pytest        # needs the db container; uses database memory_companion_test
-                                    # (add MC_RUN_S3_TESTS=1, with `docker compose up -d minio`,
-                                    # to also exercise the real S3-backed storage adapter)
-cd frontend && npm run typecheck && npm run lint && npm test && npm run build
+cd backend
+python -m venv .venv
+.venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+copy .env.example .env   # then fill in your real API keys
+uvicorn app.main:app --reload --port 8001
 ```
 
-Retrieval evaluation (needs a running backend — see `evals/README.md`):
+You need API keys for:
+- `OPENROUTER_API_KEY` — embeddings (`nvidia/nemotron-3-embed-1b:free`) and
+  TTS synthesis (`fish-audio/s2.1-pro-free:free` — the `:free` suffix is
+  required) — get one at https://openrouter.ai/keys
+- `GROQ_API_KEY` — LLM chat completion, via Groq's OpenAI-compatible endpoint
+  (default model `openai/gpt-oss-120b`, fast + generous free tier)
+- `FISH_AUDIO_API_KEY` — voice **cloning** specifically. OpenRouter only
+  exposes Fish Audio's synthesis endpoint, not cloning, so cloning a voice
+  (getting a voice id from uploaded samples) goes directly to Fish Audio's
+  own API — get a free key at https://fish.audio/app/api-keys/. Synthesis
+  afterwards reuses `OPENROUTER_API_KEY`.
+- `DEEPGRAM_API_KEY` — speech-to-text
+
+All of these have free tiers as of writing (see architecture doc discussion) —
+the MVP currently uses no paid OpenAI/ElevenLabs API at all.
+
+## 3. Frontend
 
 ```bash
-docker compose up -d db backend
-cd backend && uv run python ../evals/run_retrieval_eval.py
+cd frontend
+npm install
+copy .env.example .env
+npm run dev
 ```
+
+Open http://localhost:5173.
+
+## 4. Using it
+
+1. Create a persona (name, relationship, tone/quirks notes).
+2. Add a handful of memories (stories, facts, traits, quotes) — these are what
+   the AI is allowed to talk about.
+3. Upload 1+ short voice clips, then click "Clone voice from uploaded samples".
+4. Go to the Call tab, click to record, speak, click again to send, and listen
+   to the reply in the cloned voice.
+
+## Notes on this MVP
+
+- No auth, no multi-tenancy, no automated tests, no production logging — by
+  design, see ARCHITECTURE.md §8–9. Single local user, `.env`-based keys.
+- Push-to-talk (record → send → reply), not a continuous streaming call. A
+  real-time WebSocket/WebRTC version is a planned follow-up behind the same
+  voice-provider interface.
+- Voice samples and generated audio are stored in a private MinIO bucket
+  (not public-read) and are never served as static public files — only
+  through a server-side lookup endpoint.

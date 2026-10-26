@@ -1,65 +1,47 @@
-# Host ports are deliberately offset (5433/8100/3100/9100) to avoid clashing with other
-# local stacks. Override via .env if needed.
-name: memory-companion
-
 services:
   db:
-    image: pgvector/pgvector:pg17
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: memory
-      POSTGRES_PASSWORD: ${MC_DB_PASSWORD:-memory}
-      POSTGRES_DB: memory_companion
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rag_grief
     ports:
-      - "${MC_DB_PORT:-5433}:5432"
+      - "5432:5432"
     volumes:
-      - dbdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U memory -d memory_companion"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 10
 
   minio:
     image: cgr.dev/chainguard/minio:latest
-    command: server /data --console-address ":9001"
+    restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: ${MC_S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MC_S3_SECRET_KEY:-minioadmin}
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    command: server /data --console-address ":9001"
     ports:
-      - "${MC_S3_PORT:-9100}:9000"
-      - "${MC_S3_CONSOLE_PORT:-9101}:9001"
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
     volumes:
       - miniodata:/data
 
   backend:
-    build:
-      context: .
-      dockerfile: infra/docker/backend.Dockerfile
-    environment: &backend_env
-      MC_DATABASE_URL: postgresql+psycopg://memory:${MC_DB_PASSWORD:-memory}@db:5432/memory_companion
-      MC_JWT_SECRET: ${MC_JWT_SECRET:-dev-only-insecure-secret-change-me-0123456789}
-      MC_CORS_ORIGINS: '["http://localhost:3100"]'
-      MC_STORAGE_BACKEND: s3
-      MC_S3_ENDPOINT_URL: http://minio:9000
-      MC_S3_ACCESS_KEY: ${MC_S3_ACCESS_KEY:-minioadmin}
-      MC_S3_SECRET_KEY: ${MC_S3_SECRET_KEY:-minioadmin}
-      MC_OPENAI_API_KEY: ${MC_OPENAI_API_KEY:-}
-    depends_on:
-      db:
-        condition: service_healthy
-      minio:
-        condition: service_started
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      # Inside the Docker network, containers reach each other by service
+      # name, not localhost — override just these two so the rest of
+      # backend/.env (API keys, secrets) still applies as-is.
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/rag_grief
+      MINIO_ENDPOINT_URL: http://minio:9000
     ports:
-      - "${MC_BACKEND_PORT:-8100}:8000"
-
-  # Same image and config as `backend`, running the ingestion queue consumer instead of the
-  # API server. Scale with `docker compose up --scale worker=3` if ingestion backs up.
-  worker:
-    build:
-      context: .
-      dockerfile: infra/docker/backend.Dockerfile
-    environment: *backend_env
-    command: ["python", "-m", "app.workers.ingestion_worker"]
+      - "8001:8001"
     depends_on:
       db:
         condition: service_healthy
@@ -68,15 +50,15 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: infra/docker/frontend.Dockerfile
+      context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8100
+        VITE_API_URL: http://localhost:8001
+    restart: unless-stopped
+    ports:
+      - "5173:80"
     depends_on:
       - backend
-    ports:
-      - "${MC_FRONTEND_PORT:-3100}:3000"
 
 volumes:
-  dbdata:
+  pgdata:
   miniodata:

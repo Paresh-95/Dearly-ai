@@ -1,72 +1,52 @@
-from functools import lru_cache
-from typing import Literal
+from pathlib import Path
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="MC_", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, extra="ignore")
 
-    environment: str = "development"
-    database_url: str = "postgresql+psycopg://memory:memory@localhost:5433/memory_companion"
+    database_url: str
 
-    # Auth. The default secret is for local development only; non-development
-    # environments refuse to start with it (see `validate_for_environment`).
-    jwt_secret: str = "dev-only-insecure-secret-change-me-0123456789"
+    openrouter_api_key: str
+    embedding_base_url: str = "https://openrouter.ai/api/v1"
+    embedding_model: str = "nvidia/nemotron-3-embed-1b:free"
+
+    groq_api_key: str
+    llm_base_url: str = "https://api.groq.com/openai/v1"
+    llm_model: str = "openai/gpt-oss-120b"
+
+    fish_audio_api_key: str
+    fish_audio_base_url: str = "https://api.fish.audio"
+    tts_base_url: str = "https://openrouter.ai/api/v1"
+    tts_model: str = "fish-audio/s2.1-pro-free:free"
+
+    sarvam_api_key: str | None = None
+    sarvam_base_url: str = "https://api.sarvam.ai"
+
+    deepgram_api_key: str
+
+    frontend_origins: str = "http://localhost:5173"
+
+    minio_endpoint_url: str = "http://localhost:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin123"
+    minio_bucket: str = "rag-grief-storage"
+    minio_secure: bool = False
+
+    jwt_secret: str
     jwt_algorithm: str = "HS256"
-    access_token_minutes: int = 15
-    refresh_token_days: int = 14
-    refresh_cookie_name: str = "mc_refresh"
-    refresh_cookie_secure: bool = False
+    jwt_expires_minutes: int = 60
+    auth_cookie_secure: bool = True
 
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3100"])
+    admin_email: str
+    admin_password: str
 
-    # Embedding dimension is baked into the pgvector column by migration 0001.
-    # Changing it requires a new migration plus a full reindex.
-    embedding_dim: int = 1536
-
-    # --- Object storage for uploaded originals. "local" (default) needs no setup and is
-    # what tests use; "s3" talks to the MinIO container (or any S3-compatible endpoint). ---
-    storage_backend: Literal["local", "s3"] = "local"
-    storage_local_dir: str = "./data/uploads"
-    s3_endpoint_url: str = "http://localhost:9100"
-    s3_access_key: str = "minioadmin"
-    s3_secret_key: str = "minioadmin"
-    s3_bucket: str = "memory-companion"
-    s3_region: str = "us-east-1"
-
-    max_upload_mb: int = 50
-
-    # --- External providers. All optional: leaving them unset is a supported state, not an
-    # error — the corresponding ingestion step then fails its job with a clear, honest
-    # message instead of fabricating output. See docs/decisions/0003-provider-fallbacks.md ---
-    openai_api_key: str | None = None
-    openai_base_url: str = "https://api.openai.com/v1"
-    openai_chat_model: str = "gpt-5-mini"
-    openai_stt_model: str = "whisper-1"
-    openai_embedding_model: str = "text-embedding-3-small"
-
-    # --- Ingestion worker ---
-    worker_poll_seconds: float = 2.0
-    worker_max_attempts: int = 3
-
-    # --- Memory-aware chunking (Milestone 4). A short memory becomes one chunk; a longer
-    # one is split on sentence boundaries so no chunk exceeds this many characters. ---
-    chunk_max_chars: int = 1200
-
-    # tesseract language codes to attempt, '+'-joined. The backend/worker image installs
-    # tesseract-ocr-hin and tesseract-ocr-mar alongside the English pack (see
-    # infra/docker/backend.Dockerfile); a language not actually installed just makes OCR
-    # fail for that image, which app/services/extraction/image.py already treats as a
-    # normal "no OCR available" outcome, never a failed ingestion job.
-    ocr_languages: str = "eng+hin+mar"
-
-    def validate_for_environment(self) -> None:
-        if self.environment != "development" and self.jwt_secret.startswith("dev-only"):
-            raise RuntimeError("MC_JWT_SECRET must be set outside development")
+    @property
+    def frontend_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.frontend_origins.split(",") if o.strip()]
 
 
-@lru_cache
-def get_settings() -> Settings:
-    return Settings()
+settings = Settings()
